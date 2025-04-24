@@ -24,9 +24,11 @@ repositories {
 }
 
 dependencies {
+	implementation 'software.amazon.awssdk:eventbridge:2.27.24'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'software.amazon.awssdk:scheduler'       // EventBridge Scheduler
+	implementation 'software.amazon.awssdk:scheduler:2.25.26'       // EventBridge Scheduler
 	implementation 'software.amazon.awssdk:auth'            // AWS 인증
 	implementation 'software.amazon.awssdk:regions'
 	compileOnly 'org.projectlombok:lombok'

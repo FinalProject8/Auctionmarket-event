@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AuctionEndMessage {
     private Long auctionId;
+    private Long userId;
     private Long amount;
     private String username;
 }

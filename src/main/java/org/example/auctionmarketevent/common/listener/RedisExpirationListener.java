@@ -26,15 +26,11 @@ public class RedisExpirationListener implements MessageListener {
             try {
                 // 1. WebSocket 서버에서 낙찰자 정보 조회
                 String socketUrl = "http://localhost:8081/internal/auction/" + auctionId + "/winner";
-                AuctionEndMessage response = restTemplate.getForObject(socketUrl, AuctionEndMessage.class);
+                restTemplate.postForEntity(socketUrl, null, AuctionEndMessage.class);
 
-                // 2. Main 서버에 경매 종료 정보 POST 요청
-                String mainUrl = "http://localhost:8080/v1/auctions/end";
-                restTemplate.postForObject(mainUrl, response, AuctionEndMessage.class);
-
-                log.info("낙찰자 정보 전송 완료: {}", auctionId);
+                log.info("웹소캣 서버에 낙찰자 정보 전송 명령 완료: {}", auctionId);
             } catch (Exception e) {
-                log.error("경매 종료 처리 실패: {}", auctionId, e.getMessage());
+                log.error("웹소캣 서버에 낙찰자 정보 전송 명령 실패: {}", auctionId, e);
             }
         }
     }

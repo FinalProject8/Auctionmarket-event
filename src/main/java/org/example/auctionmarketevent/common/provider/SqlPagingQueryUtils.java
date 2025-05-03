@@ -7,7 +7,8 @@ import org.springframework.batch.item.database.PagingQueryProvider;
 
 public final class SqlPagingQueryUtils {
 
-	private SqlPagingQueryUtils() {}
+	private SqlPagingQueryUtils() {
+	}
 
 	public static String buildOrderByClause(PagingQueryProvider provider) {
 		return buildOrderByClause(provider.getSortKeys());

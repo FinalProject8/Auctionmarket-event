@@ -11,7 +11,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-@JsonPropertyOrder({ // Java 객체를 JSON 으로 직렬화할 때 필드 순서를 지정 (빅쿼리의 컬럼 순서와 맞추기 위해 지정 => 안하면 매칭 안돼서 오류남)
+@JsonPropertyOrder({ // 빅쿼리의 컬럼 순서와 맞추기 위해 Java 객체를 JSON 으로 직렬화할 때 필드 순서를 지정
 	"auctionId",
 	"productId",
 	"productName",
@@ -20,12 +20,10 @@ import lombok.Getter;
 	"auctionStartTime",
 	"auctionEndTime"
 })
-public class AuctionsWinningBidDto { // BigQuery 의 auctions_winning_bid 테이블 스키마에 맞춰 데이터를 담을 클래스
+public class AuctionsWinningBidDto {
 
 	// BigQuery 테이블 컬럼명과 필드명을 일치시키거나,
 	// @JsonProperty 를 사용하여 JSON 직렬화 시 사용할 이름 지정 가능
-	// => BigQuery 테이블의 컬렴명을 auctionId 으로 바꾸거나
-	// DTO 에서 @JsonProperty("auction_id") 으로 하거나 둘중 하나를 해야함
 	@JsonProperty("auction_id")
 	private Long auctionId;
 

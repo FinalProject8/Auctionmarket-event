@@ -46,7 +46,6 @@ public class MySqlCustomPagingQueryProvider extends AbstractSqlPagingQueryProvid
 		String subQuery = String.format("SELECT %s FROM %s WHERE %s",
 			this.baseSelectClause, this.fromClause, this.originalWhereClause);
 
-		// 외부 쿼리 수정: "ORDER BY " 제거
 		return String.format("SELECT * FROM (%s) AS derived_table %s LIMIT %d",
 			subQuery, SqlPagingQueryUtils.buildOrderByClause(this), pageSize);
 	}
@@ -56,11 +55,9 @@ public class MySqlCustomPagingQueryProvider extends AbstractSqlPagingQueryProvid
 		String subQuery = String.format("SELECT %s FROM %s WHERE %s",
 			this.baseSelectClause, this.fromClause, this.originalWhereClause);
 
-		// 외부 쿼리 수정: "ORDER BY " 제거
 		return String.format("SELECT * FROM (%s) AS derived_table WHERE %s %s LIMIT %d",
 			subQuery, getOverClause(), SqlPagingQueryUtils.buildOrderByClause(this), pageSize);
 	}
-
 
 	private String getOverClause() {
 		StringBuilder overClause = new StringBuilder();

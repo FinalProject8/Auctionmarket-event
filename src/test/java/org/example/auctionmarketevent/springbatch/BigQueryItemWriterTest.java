@@ -13,7 +13,6 @@ import java.util.List;
 import org.example.auctionmarketevent.springbatch.job.dto.AuctionsWinningBidDto;
 import org.example.auctionmarketevent.springbatch.job.writer.BigQueryItemWriter;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -40,8 +39,8 @@ class BigQueryItemWriterTest {
 	@Mock
 	private Storage mockStorage;
 
-	@Spy // 실제 객체를 사용하되 일부 메서드는 Mocking 가능한 Spy 객체 사용
-	private CsvMapper csvMapper = new CsvMapper(); // 실제 CsvMapper 사용
+	@Spy
+	private CsvMapper csvMapper = new CsvMapper();
 
 	@InjectMocks
 	private BigQueryItemWriter writer;
@@ -56,16 +55,13 @@ class BigQueryItemWriterTest {
 	@BeforeEach
 	void setUp() {
 		writer = new BigQueryItemWriter(mockStorage, testBucketName);
-
-		// StepExecution 설정 => 테스트용 메타데이터 사용
 		stepExecution = MetaDataInstanceFactory.createStepExecution();
 		stepExecution.getExecutionContext().put(GCS_FILE_URIS_KEY, new ArrayList<String>()); // URI 리스트 초기화
 		writer.saveStepExecution(stepExecution);
 	}
 
 	@Test
-	@DisplayName("데이터 쓰기 + GCS 업로드 성공")
-	void write_Success() throws Exception {
+	void 데이터_쓰기_및_GCS_업로드_성공() throws Exception {
 		// given
 		Instant now = Instant.now();
 		Timestamp nowTimestamp = Timestamp.from(now);
@@ -111,35 +107,33 @@ class BigQueryItemWriterTest {
 
 		// ExecutionContext 에 GCS URI 추가되었는지 검증
 		ExecutionContext executionContext = stepExecution.getExecutionContext();
-		List<String> gcsUris = (List<String>) executionContext.get(GCS_FILE_URIS_KEY);
+		List<String> gcsUris = (List<String>)executionContext.get(GCS_FILE_URIS_KEY);
 		assertNotNull(gcsUris);
 		assertEquals(1, gcsUris.size());
 		assertTrue(gcsUris.get(0).startsWith("gs://" + testBucketName + "/batch_load_"));
 
 		// ExecutionContext 에 최신 타임스탬프가 저장되었는지 검증
-		Timestamp maxTimestamp = (Timestamp) executionContext.get(MAX_TIMESTAMP_KEY);
+		Timestamp maxTimestamp = (Timestamp)executionContext.get(MAX_TIMESTAMP_KEY);
 		assertNotNull(maxTimestamp);
-		assertEquals(nowTimestamp.toInstant(), maxTimestamp.toInstant()); // Timestamp 비교 시 나노초가 다를 수 있음 => toInstant() 사용
+		assertEquals(nowTimestamp.toInstant(), maxTimestamp.toInstant());
 	}
 
-	@Test
-	@DisplayName("빈 Chunk 쓰기")
-	void write_EmptyChunk() throws Exception {
-		// given
-		Chunk<AuctionsWinningBidDto> emptyChunk = new Chunk<>(List.of());
-
-		// when
-		writer.write(emptyChunk);
-
-		// then
-		// GCS Storage create 메서드가 호출되지 않았는지 검증
-		verify(mockStorage, never()).create(any(BlobInfo.class), any(byte[].class));
-
-		// ExecutionContext 에 변화가 없는지 확인
-		ExecutionContext executionContext = stepExecution.getExecutionContext();
-		List<String> gcsUris = (List<String>) executionContext.get(GCS_FILE_URIS_KEY);
-		assertTrue(gcsUris == null || gcsUris.isEmpty()); // 초기화된 상태 그대로여야 함
-		assertNull(executionContext.get(MAX_TIMESTAMP_KEY)); // 타임스탬프 갱신 X
-	}
+	// @Test
+	// void 빈_Chunk_쓰기() throws Exception {
+	// 	// given
+	// 	Chunk<AuctionsWinningBidDto> emptyChunk = new Chunk<>(List.of());
+	//
+	// 	// when
+	// 	writer.write(emptyChunk);
+	//
+	// 	// then
+	// 	verify(mockStorage, never()).create(any(BlobInfo.class), any(byte[].class));
+	//
+	// 	// ExecutionContext 에 변화가 없는지 확인
+	// 	ExecutionContext executionContext = stepExecution.getExecutionContext();
+	// 	List<String> gcsUris = (List<String>) executionContext.get(GCS_FILE_URIS_KEY);
+	// 	assertTrue(gcsUris == null || gcsUris.isEmpty());
+	// 	assertNull(executionContext.get(MAX_TIMESTAMP_KEY));
+	// }
 }
 

@@ -8,7 +8,7 @@ import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Configuration
-public class JacksonConfig { // 데이터를 JSON 형식으로 직렬화
+public class JacksonConfig {
 
 	@Bean
 	public ObjectMapper objectMapper() {

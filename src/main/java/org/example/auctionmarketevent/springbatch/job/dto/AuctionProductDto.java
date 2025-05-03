@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuctionProductDto { // auctions 테이블과 product 테이블을 조인한 결과를 담을 클래스
+public class AuctionProductDto {
 
 	private Long auctionId;
 	private Long productId;

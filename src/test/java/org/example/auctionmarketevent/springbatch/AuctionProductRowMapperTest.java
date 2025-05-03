@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 import org.example.auctionmarketevent.springbatch.job.dto.AuctionProductDto;
 import org.example.auctionmarketevent.springbatch.job.reader.AuctionProductRowMapper;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -31,8 +30,7 @@ class AuctionProductRowMapperTest {
 	}
 
 	@Test
-	@DisplayName("ResultSet 매핑 테스트")
-	void mapRow_ValidResultSet_ShouldReturnDto() throws SQLException {
+	void ResultSet_매핑_테스트() throws SQLException {
 		// given
 		Timestamp startTime = Timestamp.valueOf(LocalDateTime.of(2025, 4, 29, 10, 0, 0));
 		Timestamp endTime = Timestamp.valueOf(LocalDateTime.of(2025, 4, 29, 12, 0, 0));
@@ -67,8 +65,7 @@ class AuctionProductRowMapperTest {
 	}
 
 	@Test
-	@DisplayName("ResultSet 에서 SQLException 발생 시 예외 테스트")
-	void mapRow_ResultSetThrowsSQLException_ShouldPropagateException() throws SQLException {
+	void ResultSet_에서_SQLException_발생_시_예외_테스트() throws SQLException {
 		// given
 		when(rs.getLong("auction_id")).thenReturn(1L);
 		when(rs.getLong("product_id")).thenReturn(101L);

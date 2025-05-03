@@ -11,7 +11,6 @@ import org.example.auctionmarketevent.springbatch.job.dto.AuctionProductDto;
 import org.example.auctionmarketevent.springbatch.job.dto.AuctionsWinningBidDto;
 import org.example.auctionmarketevent.springbatch.job.processor.DataTransformerProcessor;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class DataTransformerProcessorTest {
@@ -20,13 +19,11 @@ class DataTransformerProcessorTest {
 
 	@BeforeEach
 	void setUp() {
-		// 각 테스트 전에 Processor 인스턴스 생성
 		processor = new DataTransformerProcessor();
 	}
 
 	@Test
-	@DisplayName("데이터 변환 성공")
-	void process_Success() throws Exception {
+	void 데이터_변환_성공() throws Exception {
 		// given
 		Timestamp now = Timestamp.valueOf(LocalDateTime.now());
 		Instant nowInstant = now.toInstant();
@@ -57,8 +54,7 @@ class DataTransformerProcessorTest {
 	}
 
 	@Test
-	@DisplayName("Null 값이 포함된 데이터 변환 성공")
-	void process_WithNullValues() throws Exception {
+	void Null_값이_포함된_데이터_변환_성공() throws Exception {
 		// given
 		Timestamp startTime = Timestamp.valueOf(LocalDateTime.now());
 		Instant startInstant = startTime.toInstant();

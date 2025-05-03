@@ -1,28 +1,34 @@
 package org.example.auctionmarketevent.common.listener;
 
-import com.google.cloud.bigquery.*;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.Storage;
-
-import lombok.extern.slf4j.Slf4j;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryException;
+import com.google.cloud.bigquery.CsvOptions;
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.Job;
+import com.google.cloud.bigquery.JobInfo;
+import com.google.cloud.bigquery.JobStatistics;
+import com.google.cloud.bigquery.LoadJobConfiguration;
+import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.StandardSQLTypeName;
+import com.google.cloud.bigquery.TableId;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.Storage;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -30,15 +36,16 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 
 	private final JdbcTemplate jdbcTemplate;
 	private final String jobName;
-	private final BigQuery bigquery; // BigQuery 클라이언트 주입
-	private final Storage storage; // Storage 클라이언트 주입
-	private final String datasetName; // BigQuery 데이터셋 이름
-	private final String tableName; // BigQuery 테이블 이름
-	private final String gcsBucketName; // GSC 버킷 이름
+	private final BigQuery bigquery;
+	private final Storage storage;
+	private final String datasetName;
+	private final String tableName;
+	private final String gcsBucketName;
 
-	private static final String GCS_FILE_URIS_KEY = "gcsFileUris"; // ExecutionContext 에 GCS 파일 경로 리스트를 저장할 때 사용할 키
-	private static final String MAX_TIMESTAMP_KEY = "maxProcessedTimestampInChunk"; // ExecutionContext 에 처리된 데이터 중 최신 타임스탬프 값을 저장할 때 사용할 키
-	private static final String STEP_START_TIME_KEY = "stepStartTime"; // 시작 시간 저장을 위한 키 추가
+	private static final String GCS_FILE_URIS_KEY = "gcsFileUris";
+	private static final String MAX_TIMESTAMP_KEY = "maxProcessedTimestampInChunk";
+	private static final String STEP_START_TIME_KEY = "stepStartTime";
+
 	// 생성자
 	public IncrementalTimestampStepListener(JdbcTemplate jdbcTemplate,
 		@Value("${app.batch.job-name}") String jobName,
@@ -59,8 +66,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 	// Step 시작 되기 전에 실행
 	@Override
 	public void beforeStep(StepExecution stepExecution) {
-		log.info("Before Step: 마지막으로 처리된 타임스탬프 호출: 작업 = {}", jobName);
-
 		// Step 시작 시간 기록
 		stepExecution.getExecutionContext().put(STEP_START_TIME_KEY, LocalDateTime.now());
 
@@ -74,10 +79,8 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 				jobName
 			);
 		} catch (Exception e) {
-			log.warn("마지막 처리 타임스탬프를 찾을 수 없음: 작업 = {}", jobName, e);
 			lastProcessedTimestamp = Timestamp.valueOf(LocalDateTime.MIN);
 		}
-		// ExecutionContext 에 저장
 		stepExecution.getExecutionContext().put("lastProcessedTimestamp", lastProcessedTimestamp);
 	}
 
@@ -90,8 +93,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 
 		// 스텝이 성공적으로 완료되었고, GCS 에 로드된 파일이 있는지 확인
 		if (stepExecution.getExitStatus().equals(ExitStatus.COMPLETED) && !CollectionUtils.isEmpty(gcsFileUris)) {
-			log.info("After Step: BigQuery 로드 시작: 완료된 스텝 = {}, 파일 크기 = {}",
-				stepExecution.getStepName(), gcsFileUris.size());
 
 			// BigQuery 로드 시간 측정 시작
 			long bqLoadStartTime = System.currentTimeMillis();
@@ -101,18 +102,16 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 
 			long bqLoadEndTime = System.currentTimeMillis();
 			long bqLoadDuration = bqLoadEndTime - bqLoadStartTime;
-			double bqLoadDurationSeconds = bqLoadDuration / 1000.0;
-			log.info("BigQuery 로드 (runBigQueryLoadJob) 실행 시간 = {} 밀리초 ({} 초)", bqLoadDuration, bqLoadDurationSeconds);
-			// BigQuery 로드 시간 측정 종료
 
+			// BigQuery 로드 시간 측정 종료
 			if (loadJobSuccessful) {
-				log.info("BigQuery 로드 성공");
 
 				// 로드 성공 시, Writer 가 저장한 최대 타임스탬프를 메타데이터에 업데이트
 				Object maxTimestampObj = stepExecution.getExecutionContext().get(MAX_TIMESTAMP_KEY);
 
 				// Timestamp 타입으로 변환
 				Timestamp maxTimestamp = (Timestamp)maxTimestampObj;
+
 				// 최신 타임스탬프로 업데이트
 				updateMetadataTimestamp(maxTimestamp);
 
@@ -120,7 +119,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 				deleteGcsFiles(gcsFileUris);
 
 			} else {
-				log.error("BigQuery 로드 실패");
 				stepExecution.setExitStatus(ExitStatus.FAILED); // step 상태 변경
 			}
 
@@ -133,19 +131,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 				stepExecution.getStepName(), stepExecution.getExitStatus());
 		}
 
-		// Step 종료 시간 기록
-		LocalDateTime endTime = LocalDateTime.now();
-		ExecutionContext executionContext = stepExecution.getExecutionContext();
-		LocalDateTime startTime = (LocalDateTime) executionContext.get(STEP_START_TIME_KEY);
-
-		if (startTime != null) {
-			Duration stepDuration = Duration.between(startTime, endTime);
-			log.info("Step = {}, 전체 실행 시간 = {} 밀리초 ({} 초)",
-				stepExecution.getStepName(),
-				stepDuration.toMillis(),
-				stepDuration.toSeconds());
-		}
-
 		// 스텝 최종 상태 반환
 		return stepExecution.getExitStatus();
 	}
@@ -154,7 +139,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 	private boolean runBigQueryLoadJob(List<String> gcsFileUris) {
 
 		try {
-			// BigQuery 테이블 식별하는 객체 생성
 			TableId tableId = TableId.of(datasetName, tableName);
 
 			// BigQuery 테이블 스키마 정의
@@ -166,11 +150,9 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 				Field.of("max_price", StandardSQLTypeName.INT64),
 				Field.of("auction_start_time", StandardSQLTypeName.TIMESTAMP),
 				Field.of("auction_end_time", StandardSQLTypeName.TIMESTAMP)
-				// lastModified 포함 안함 (@JsonIgnore)
 			);
 
 			// CSV 옵션 설정
-			// 헤더 행 없음 => CSV 첫 번째 줄부터 인식
 			CsvOptions csvOptions = CsvOptions.newBuilder().setSkipLeadingRows(0).build();
 
 			// BigQuery 로드 설정
@@ -182,7 +164,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 
 			// 로드 작업 생성 및 실행
 			Job job = bigquery.create(JobInfo.newBuilder(loadConfig).build());
-			log.info("BigQuery 로드 시작: 작업 = {}", job.getJobId());
 
 			// 작업 완료 대기 (동기 방식)
 			Job completedJob = job.waitFor();
@@ -190,14 +171,12 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 			// 작업이 성공적으로 완료되었는지 확인
 			if (completedJob != null && completedJob.getStatus().getError() == null) {
 				JobStatistics.LoadStatistics stats = completedJob.getStatistics();
-				log.info("BigQuery 로드 성공: 작업 = {}, 행 = {}, 데이터셋 = {}, 테이블 = {}",
-					completedJob.getJobId(), stats.getOutputRows(), datasetName, tableName);
 				return true;
 
 			} else {
 				String errorMessage = "알 수 없는 오류 발생";
 				if (completedJob != null && completedJob.getStatus().getError() != null) {
-					errorMessage = completedJob.getStatus().getError().toString(); // 실제 오류 메세지로 덮어씀
+					errorMessage = completedJob.getStatus().getError().toString();
 				}
 				log.error("BigQuery 로드 실패: 작업 = {}. 오류 = {}",
 					(job != null ? job.getJobId() : "N/A"), errorMessage);
@@ -215,16 +194,11 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 	// batch_job_metadata 타임스탬프 업데이트 메서드
 	private void updateMetadataTimestamp(Timestamp maxTimestamp) {
 		try {
-			int updatedRows = jdbcTemplate.update(
+			jdbcTemplate.update(
 				"UPDATE batch_job_metadata SET last_processed_timestamp = ? WHERE job_name = ?",
 				maxTimestamp,
 				jobName
 			);
-			if (updatedRows > 0) {
-				log.info("batch_job_metadata 업데이트 성공: 작업 = '{}', 타임스탬프 = {}", jobName, maxTimestamp);
-			} else {
-				log.warn("batch_job_metadata 업데이트 실패: 작업 = '{}'", jobName);
-			}
 		} catch (Exception e) {
 			log.error("batch_job_metadata 업데이트 중 오류 발생: 작업 = '{}'", jobName, e);
 		}
@@ -237,7 +211,6 @@ public class IncrementalTimestampStepListener implements StepExecutionListener {
 		if (CollectionUtils.isEmpty(gcsFileUris)) {
 			return;
 		}
-		log.info("임시 GCS 파일 삭제 시작: 파일 크기 = {}", gcsFileUris.size());
 
 		List<BlobId> blobIds = new ArrayList<>();
 

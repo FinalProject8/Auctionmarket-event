@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: Auctionmarket-event
+
+  server:
+    port: 8082
+
+  # 데이터 베이스 설정
+  datasource:
+    url: jdbc:mysql://localhost:3306/schedule?serverTimezone=Asia/Seoul
+    username: root
+    password: smin7097
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 스프링 배치 설정
+  batch:
+    jdbc:
+             initialize-schema: always # 애플리케이션 시작 시 배치 메타데이터 테이블 자동 생성
+#      initialize-schema: never
+    job:
+      enabled: false   # 애플리케이션으로 실행 시 자동으로 모든 Job 실행 방지 => 스케줄러나 수동으로 실행
+  cloud:
+    gcp:
+      project-id: titanium-deck-457610-c0 # GCP 프로젝트 ID
+      credentials: # 인증 키 파일 or 환경변수
+        location: file:/Users/iseungmin/Desktop/TeamProject/크림/titanium-deck-457610-c0-75eb601a64f7.json
+      bigquery:
+        dataset-name: auction_analytics # BigQuery 데이터셋 이름
+        table-name: auctions_winning_bid_copy # BigQuery 테이블 이름
+      storage:
+        bucket-name: auction_successful_bids # BigQuery 로드에 사용할 GCS 버킷 이름
+
+app:
+  batch:
+    chunk-size: 1000 # 배치 처리 단위 크기
+    job-name: mysqlToBigQueryJob # Job 이름
+
+
+logging:
+  level:
+    org.springframework.batch: DEBUG
+    org.springframework.jdbc.core: DEBUG

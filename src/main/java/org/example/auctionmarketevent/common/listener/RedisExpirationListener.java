@@ -3,7 +3,6 @@ package org.example.auctionmarketevent.common.listener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
-import org.example.auctionmarketevent.common.message.AuctionEndMessage;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
